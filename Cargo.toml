@@ -1,0 +1,26 @@
+[package]
+name = "bitextcleaner"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "bitextcleaner"
+crate-type = ["cdylib"]
+
+
+[dependencies]
+csv = "1.2.2"
+lingua = "1.5.0"
+rayon = "1.7.0"
+regex = "1.8.4"
+rust = "0.0.1"
+unicode-segmentation = "1.10.1"
+levenshtein = "1.0.5"
+nnsplit = "0.5.9"
+pyo3 = { version = "0.19.2", features = ["extension-module"] }
+serde_yaml = "0.9.25"
+diacritics = "0.2.0"
+bloomfilter = "1.0.12"
+phf = {version = "0.11.2", features = ["macros"]}
