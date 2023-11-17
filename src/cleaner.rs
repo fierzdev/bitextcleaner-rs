@@ -44,9 +44,35 @@ pub fn diacritics_cleaner(bitext: Vec<BiText>) -> Vec<BiText>{
     ).collect()
 }
 
+pub fn html_cleaner(bitext: Vec<BiText>) -> Vec<BiText> {
+    bitext.into_iter().map(
+        |mut bitext| {
+            bitext.text = html_escape::decode_html_entities(&*bitext.text).to_string();
+            match bitext.translation {
+                Some(text) => bitext.translation = Some(html_escape::decode_html_entities(&*text).to_string()),
+                _ => ()
+            };
+            bitext
+        }
+    ).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    pub fn test_html_cleaner(){
+            let bitexts: Vec<BiText> = vec!["a &gt; b &amp;&amp; a &lt; c", "123 123"]
+                .into_iter()
+                .map(|x| BiText::new(String::from(x), None, None, None))
+                .collect();
+            let expected: Vec<BiText> = vec!["a > b && a < c", "123 123"]
+                .into_iter()
+                .map(|x| BiText::new(String::from(x), None, None, None))
+                .collect();
+            let cleaned = html_cleaner(bitexts);
+            assert_eq!(expected, cleaned)
+    }
 
     #[test]
     pub fn test_whitespace_cleaner() {

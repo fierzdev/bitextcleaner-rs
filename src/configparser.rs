@@ -4,11 +4,12 @@ use serde_yaml;
 use crate::cleaner::*;
 use crate::model::BiText;
 use phf::phf_map;
+use crate::filter::LengthFilterUnit;
 
 static COUNTRIES: phf::Map<&'static str, fn (Vec<BiText>)->Vec<BiText>> = phf_map! {
     "whitespace_cleaner" => crate::cleaner::whitespace_cleaner,
     "diacritics_cleaner" => crate::cleaner::diacritics_cleaner,
-    "length_filter" => crate::filter::LengthRatioFilter,
+    // "length_filter" => crate::filter::LengthRatioFilter { threshold: 1.2, unit: LengthFilterUnit::Char }:filter_text,
 };
 
 pub(crate) fn parse_config(config: &str) -> BTreeMap<String,String>{

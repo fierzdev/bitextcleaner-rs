@@ -1,9 +1,13 @@
+use std::any::Any;
 use crate::model::BiText;
 use levenshtein;
 use rayon::prelude::*;
 use regex;
 use regex::Regex;
 use std::cmp::{max, min};
+use std::collections::{HashSet, LinkedList};
+use std::ops::Deref;
+use std::path::Prefix::Verbatim;
 use std::str::FromStr;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -38,7 +42,7 @@ impl LengthFilter {
 
 impl Filter for LengthFilter {
     fn filter_text(self, texts: Vec<BiText>) -> Vec<BiText> {
-        let mut filtered;
+        let filtered;
         match self.unit {
             LengthFilterUnit::Char => {
                 filtered = texts
@@ -228,9 +232,179 @@ impl Filter for SimilarityFilter {
     }
 }
 
+
+pub struct HtmlFilter{
+    html_list: HashSet<String>
+
+}
+
+impl HtmlFilter {
+    pub fn new() -> Self{
+        let html_tags:Vec<String>  =vec![
+            "a", 
+            "abbr", 
+            "address", 
+            "area", 
+            "article", 
+            "aside", 
+            "audio", 
+            "b", 
+            "bdi", 
+            "bdo", 
+            "blockquote", 
+            "body", 
+            "br", 
+            "button", 
+            "canvas", 
+            "caption", 
+            "cite", 
+            "code", 
+            "col", 
+            "colgroup", 
+            "command", 
+            "datalist", 
+            "dd", 
+            "del", 
+            "details", 
+            "dfn", 
+            "div", 
+            "dl", 
+            "dt", 
+            "em", 
+            "embed", 
+            "fieldset", 
+            "figcaption", 
+            "figure", 
+            "footer", 
+            "form", 
+            "h1", 
+            "h2", 
+            "h3", 
+            "h4", 
+            "h5", 
+            "h6", 
+            "header", 
+            "hr", 
+            "html", 
+            "i", 
+            "iframe", 
+            "img", 
+            "input", 
+            "ins", 
+            "kbd", 
+            "keygen", 
+            "label", 
+            "legend", 
+            "li", 
+            "main", 
+            "map", 
+            "mark", 
+            "menu", 
+            "meter", 
+            "nav", 
+            "object", 
+            "ol", 
+            "optgroup", 
+            "option", 
+            "output", 
+            "p", 
+            "param", 
+            "pre", 
+            "progress", 
+            "q", 
+            "rp", 
+            "rt", 
+            "ruby", 
+            "s", 
+            "samp", 
+            "section", 
+            "select", 
+            "small", 
+            "source", 
+            "span", 
+            "strong", 
+            "sub", 
+            "summary", 
+            "sup", 
+            "table", 
+            "tbody", 
+            "td", 
+            "textarea", 
+            "tfoot", 
+            "th", 
+            "thead", 
+            "time", 
+            "tr", 
+            "track", 
+            "u", 
+            "ul", 
+            "var", 
+            "video", 
+            "wbr",
+        ].into_iter().map(|x| String::from(x)).collect();
+        HtmlFilter{html_list: HashSet::from_iter(html_tags.into_iter())}
+    }
+}
+
+impl Filter for HtmlFilter{
+    fn filter_text(self, texts: Vec<BiText>) -> Vec<BiText> {
+        let re = Regex::from_str("(?s)</?(([A-Za-z0-9_-]+).*?)>").unwrap();
+
+        let s =  String::from("<li name='peter'>Abc</test>");
+
+        //let captures1: Vec<String> = re.captures_iter(&*s).map(|x| x.iter().into_iter().flat_map(|x| x.unwrap().as_str().parse())).collect();
+        println!("{}", re.replace_all(&*s, ""));
+
+        let replaced =  re.replace_all(&*s, |capture: &regex::Captures| {
+            if (self.html_list.contains(&*capture[2].to_lowercase())) {
+                return String::from("") //capture[1].to_uppercase()
+            }
+            capture[0].to_string()
+        });
+        let filtered = texts.into_iter().map(
+            |mut s| {
+                s.text = re.replace_all(&*s.text, |capture: &regex::Captures| {
+                    if (self.html_list.contains(&*capture[2].to_lowercase())) {
+                        return String::from("") //capture[1].to_uppercase()
+                    }
+                    capture[0].to_string()
+                }).parse().unwrap();
+                match s.translation {
+                    Some(input) => {s.translation = Some(re.replace_all(&*input, |capture: &regex::Captures| {
+                        if (self.html_list.contains(&*capture[2].to_lowercase())) {
+                            return String::from("") //capture[1].to_uppercase()
+                        }
+                        capture[0].to_string()
+                    }).parse().unwrap())},
+                    None => {}
+                }
+                s
+            }
+        ).collect();
+
+        println!("{}", replaced.to_string());
+
+        filtered
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_html_filter(){
+        let test_vectors: Vec<BiText> = vec!["<a>This is a test</a>", "<li>Not all of this should be filtered</li><dontfilter>", "bla"]
+            .into_iter()
+            .map(|x|BiText::new(String::from(x), None, Some(String::from(x)), None))
+            .collect();
+        let expected: Vec<BiText> = vec!["This is a test", "Not all of this should be filtered<dontfilter>", "bla"]
+            .into_iter()
+            .map(|x|BiText::new(String::from(x), None, Some(String::from(x)), None))
+            .collect();
+        let cleaner = HtmlFilter::new();
+        let cleaned = cleaner.filter_text(test_vectors);
+        assert_eq!(cleaned, expected)
+    }
 
     #[test]
     fn test_length_filter_short() {

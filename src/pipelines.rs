@@ -6,7 +6,7 @@ use crate::model::BiText;
 
 pub(crate) fn default_pipeline(bitext: Vec<BiText>) -> Vec<BiText> {
     let mut bitext = cleaner::whitespace_cleaner(bitext);
-    bitext = TargetDeduplicator::deduplicate(bitext);
+    bitext = TargetDeduplicator::deduplicate(bitext, false);
     bitext = filter::LengthFilter::new(5,40, LengthFilterUnit::Word).filter_text(bitext);
     println!("lengthfilter: {}", bitext.len());
     // bitext = filter::LangIdFilter::new(String::from("German")).filter_text(bitext);
